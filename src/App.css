@@ -916,7 +916,9 @@
 }
 
 .sheet-body {
-  padding: 16px;
+  /* 下端（ホームバー等のセーフエリア含む）に余白を足し、
+     保存ボタンが画面下に張り付いて低く見えないようにする */
+  padding: 16px 16px calc(28px + env(safe-area-inset-bottom, 0px));
 }
 
 .bulk-tag-desc {
