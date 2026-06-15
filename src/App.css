@@ -14,7 +14,7 @@
   background: var(--accent);
   color: var(--accent-text);
   border-radius: 12px;
-  padding: 8px 16px;
+  padding: 11px 16px;
   margin-bottom: 16px;
   box-shadow: var(--shadow);
   /* 下にスクロールしても画面上部に固定する。
@@ -35,6 +35,19 @@
   text-align: center;
   color: var(--text-sub);
   margin-top: 48px;
+}
+
+.empty-title {
+  font-size: 17px;
+  color: var(--text-sub);
+  margin: 0 0 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-sub);
+  margin: 0;
 }
 
 .menu-btn {
@@ -181,13 +194,13 @@
   margin: 0;
   /* 上下の padding はドラッグ時の押し出し(HALF_GAP)を吸収する予約スペース。
      これによりつかんでもスクロール領域が増えない（TagManager の HALF_GAP と一致させる）。 */
-  padding: 2px 0;
+  padding: 8px 0;
   display: flex;
   flex-direction: column;
 }
 
 .tag-manage-hint {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-size: 12px;
   color: var(--text-sub);
 }
@@ -632,7 +645,7 @@
 .fab {
   position: fixed;
   right: max(16px, calc((100vw - var(--content-max)) / 2 + 16px));
-  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -904,7 +917,7 @@
 }
 
 .sheet-header h2 {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 600;
   margin: 0;
 }

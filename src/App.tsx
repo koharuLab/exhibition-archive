@@ -403,6 +403,15 @@ export default function App() {
 
       {loading ? (
         <p className="empty-state">読み込み中...</p>
+      ) : exhibitions.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-title">まだ展覧会が追加されていません</p>
+          <p className="empty-text">
+            訪れた展覧会や、気になる展覧会を
+            <br />
+            右下の＋ボタンから追加できます
+          </p>
+        </div>
       ) : (
         <ExhibitionGrid
           exhibitions={filtered}

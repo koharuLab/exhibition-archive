@@ -305,7 +305,7 @@ export function TagManager({
           ) : (
             <>
               <p className="tag-manage-hint">
-                タグはドラッグで並び替えできます。スマホでは長押しして動かします。
+                タグはドラッグで並び替えできます。
               </p>
               <ul className="tag-manage-list" ref={listRef}>
                 {orderedTags.map((item, index) => {
@@ -316,32 +316,25 @@ export function TagManager({
                   if (dragging) {
                     transform = `translateY(${dragY}px)`;
                   } else if (dragKey !== null && dropIndex !== null) {
-                    // 挿入先の上下に HALF_GAP ずつ押し開いて隙間を作る。
-                    // 押し出し分は .tag-manage-list の上下 padding で吸収する（CSS と値を一致させる）。
-                    const HALF_GAP = 2;
+                    // 掴んだタグの周りを上下対称に開ける。
+                    // ・並べ替え分: from と挿入位置の間の行を 1 行ぶん(dragHeight)スライドさせる。
+                    // ・隙間分(HALF_GAP): 挿入位置より上の行は上へ、下の行は下へ均等に逃がす。
+                    //   これでリスト全体が中心を保ったまま上下へ広がり、上だけ詰まらない。
+                    //   端の押し出しは .tag-manage-list の上下 padding で吸収する（値を一致させる）。
+                    const HALF_GAP = 8;
                     const from = dragFromIndex;
-                    if (dropIndex >= from) {
-                      // その場（つかんだ直後）・下移動
-                      if (index > from && index < dropIndex) {
-                        // 間の行を上へ詰める。挿入先の1行上は追加で HALF_GAP 押し上げる
-                        const extra = index === dropIndex - 1 ? HALF_GAP : 0;
-                        transform = `translateY(${-(dragHeight + extra)}px)`;
-                      } else if (index >= Math.max(from + 1, dropIndex)) {
-                        transform = `translateY(${HALF_GAP}px)`; // 挿入先以降を押し下げる
-                      } else if (index === dropIndex - 1 && index <= from) {
-                        // 挿入先の1行上（間の行がないケース: dropIndex == from）
-                        transform = `translateY(${-HALF_GAP}px)`;
-                      }
-                    } else {
-                      // 上移動
-                      if (index >= dropIndex && index < from) {
-                        // 間の行を下へ送る。挿入先の1行下は追加で HALF_GAP 押し下げる
-                        const extra = index === dropIndex ? HALF_GAP : 0;
-                        transform = `translateY(${dragHeight + extra}px)`;
-                      } else if (index < dropIndex) {
-                        transform = `translateY(${-HALF_GAP}px)`; // 挿入先より上を押し上げる
-                      }
+                    const target = dropIndex;
+
+                    let shift = 0; // 並べ替えによるスライド量
+                    if (target > from && index > from && index < target) {
+                      shift = -dragHeight; // 下移動：間の行を上へ詰める
+                    } else if (target < from && index >= target && index < from) {
+                      shift = dragHeight; // 上移動：間の行を下へ送る
                     }
+
+                    // 挿入位置より下は下へ、上は上へ（掴んだ行はこの分岐に来ない）
+                    const gap = index >= target ? HALF_GAP : -HALF_GAP;
+                    transform = `translateY(${shift + gap}px)`;
                   }
                   return (
                     <li

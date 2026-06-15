@@ -27,7 +27,8 @@ export function ExhibitionGrid({
   onLongPress,
 }: ExhibitionGridProps) {
   if (exhibitions.length === 0) {
-    return <p className="empty-state">展覧会がまだ登録されていません。</p>;
+    // ここに来るのは絞り込み結果が0件のとき（全体が0件のときは App 側で案内を表示）
+    return <p className="empty-state">該当する展覧会がありません。</p>;
   }
   return (
     <div className={viewMode === 'list' ? 'list' : 'grid'}>
