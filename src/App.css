@@ -17,9 +17,11 @@
   padding: 8px 16px;
   margin-bottom: 16px;
   box-shadow: var(--shadow);
-  /* 下にスクロールしても画面上部に固定する */
+  /* 下にスクロールしても画面上部に固定する。
+     固定時の上余白を .list-screen の上パディング(16px)に合わせ、
+     ノッチ等のセーフエリアぶんも確保する */
   position: sticky;
-  top: 0;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   z-index: 100;
 }
 

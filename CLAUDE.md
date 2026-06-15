@@ -6,12 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-行った展覧会を「訪問年月・展覧会名・タグ・参照情報」で記録する**個人用 PWA**。
+行った展覧会を「訪問年月・展覧会名・タグ・参照情報」で記録する**個人用 Web アプリ**。
 メイン画面で登録済み展覧会を訪問年月の新しい順に2列グリッドで表示する。
 完全な仕様は [project.txt](project.txt) を参照（これが唯一の信頼できる仕様源）。
 
-- 技術スタック: **React + TypeScript + Vite + IndexedDB (PWA)**
+- 技術スタック: **React 19 + TypeScript + Vite 8 + IndexedDB**（DB アクセスは `idb` ライブラリ）。
 - データは**端末内（IndexedDB）のみ**に保存。複数端末間の自動同期は行わない。
+- インストール用に `public/manifest.webmanifest` を持つが、**Service Worker は未導入**（オフライン用アプリシェルキャッシュは無し）。
+- ESLint は flat config（[eslint.config.js](eslint.config.js)）。型情報を使う型チェックルールは未有効、`recommended` ベース。
 
 ## 現在の状態
 
