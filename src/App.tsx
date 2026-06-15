@@ -133,6 +133,19 @@ export default function App() {
     setBulkDeleteOpen(false);
     setSelectionMenu(null);
   };
+  // 選択モード中、ヘッダー・カード・各種オーバーレイ以外の余白をタップしたら選択を解除する
+  const handleScreenClick = (e: React.MouseEvent) => {
+    if (!selectionMode) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest(
+        '.list-header, .card, .sheet-overlay, .modal-overlay, .menu-overlay, .settings-overlay, .confirm-overlay',
+      )
+    ) {
+      return;
+    }
+    cancelSelection();
+  };
   // すべて選択／すべて解除（表示中のカードが対象）
   const selectAll = () => {
     setSelectedIds(filtered.map((e) => e.id));
@@ -270,7 +283,7 @@ export default function App() {
   }
 
   return (
-    <div className="list-screen">
+    <div className="list-screen" onClick={handleScreenClick}>
       {selectionMode ? (
         <header className="list-header">
           <button type="button" className="menu-btn" aria-label="選択をやめる" onClick={cancelSelection}>

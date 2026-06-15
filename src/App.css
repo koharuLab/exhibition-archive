@@ -54,7 +54,7 @@
   background: none;
   border: none;
   color: inherit;
-  font-size: 21px;
+  font-size: 25px;
   line-height: 1;
   padding: 4px 8px;
   border-radius: 8px;
@@ -234,6 +234,11 @@
   cursor: grabbing;
   /* ドラッグ中の行はポインタに即追従させる（スライドの transition は効かせない） */
   transition: none;
+}
+
+/* ダークモードでは掴んだ行だけ surface より少しだけ明るくして浮かせる */
+:root[data-theme='dark'] .tag-manage-row.dragging {
+  background: #2a2c37;
 }
 
 .tag-count {
@@ -655,6 +660,12 @@
   font-size: 32px;
   line-height: 1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  /* 押下時に少しだけ縮める */
+  transition: transform 0.1s ease;
+}
+
+.fab:active {
+  transform: scale(0.92);
 }
 
 /* ===== 元に戻す通知（トースト） ===== */
@@ -1162,7 +1173,6 @@
 .tag-add-row button:active,
 .detail-actions .action-btn:not(.danger):active {
   background: var(--btn-outline);
-  border-color: var(--btn-outline);
   color: var(--surface);
 }
 
@@ -1201,13 +1211,12 @@
 :root[data-theme='dark'] .primary-btn:active,
 :root[data-theme='dark'] .confirm-primary:active,
 :root[data-theme='dark'] .fab:active {
-  background: #1f60b4;
-  color: var(--accent-ui);
+  background: var(--btn-outline);
+  color: var(--accent);
 }
 
 /* ダークでも詳細の編集ボタンは btn-outline 反転（タグ編集ボタンと統一） */
 :root[data-theme='dark'] .detail-actions .action-btn:not(.danger):active {
   background: var(--btn-outline);
-  border-color: var(--btn-outline);
   color: var(--surface);
 }
