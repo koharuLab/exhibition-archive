@@ -1,0 +1,1194 @@
+/* ===== 一覧画面 ===== */
+.list-screen {
+  position: relative;
+  min-height: 100svh;
+  padding: 16px 16px 96px;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 12px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  /* 下にスクロールしても画面上部に固定する */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.list-header h1 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-sub);
+  margin-top: 48px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 21px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+/* 複数選択モードのヘッダー */
+.selection-count {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: inherit;
+}
+
+/* 選択モードヘッダーのドロップダウン */
+.header-menu-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* ドロップダウンの外側クリック捕捉（背景は暗くしない） */
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 130;
+  min-width: 150px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.menu-item.danger {
+  color: var(--danger);
+}
+
+.menu-item:disabled {
+  opacity: 0.5;
+}
+
+/* ===== メニュー（ドロップダウン） ===== */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.menu-panel {
+  position: fixed;
+  top: 64px;
+  right: max(16px, calc((100vw - var(--content-max)) / 2 + 16px));
+  min-width: 168px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.menu-item:hover {
+  background: var(--bg);
+}
+
+/* ===== モーダル（タグ管理など） ===== */
+/* 中央寄せモーダル系オーバーレイの共通土台（z-index は各自で指定） */
+.modal-overlay,
+.settings-overlay,
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* 狭い画面でも本文（#root）と同じ下限幅を保ち、中身を潰さない */
+  min-width: var(--content-min);
+}
+
+.modal-overlay {
+  z-index: 150;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92svh;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.tag-manage-list {
+  list-style: none;
+  margin: 0;
+  /* 上下の padding はドラッグ時の押し出し(HALF_GAP)を吸収する予約スペース。
+     これによりつかんでもスクロール領域が増えない（TagManager の HALF_GAP と一致させる）。 */
+  padding: 2px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-manage-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.tag-manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  /* 行全体をドラッグ可能に（編集・削除ボタンは除外） */
+  cursor: grab;
+  /* 通常は縦スクロール可。タッチは長押しでドラッグ開始し、ドラッグ中のみ JS でスクロール抑止 */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-touch-callout: none; /* 長押し時の選択メニューを抑止 */
+  /* 挿入時に前後の行がスライドする動きをなめらかにする */
+  transition: transform 0.15s ease;
+}
+
+/* ドラッグ並び替え */
+.tag-manage-row.dragging {
+  position: relative;
+  z-index: 5;
+  border-bottom-color: transparent;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  opacity: 0.97;
+  cursor: grabbing;
+  /* ドラッグ中の行はポインタに即追従させる（スライドの transition は効かせない） */
+  transition: none;
+}
+
+.tag-count {
+  font-size: 14px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.tag-row-actions {
+  display: flex;
+  gap: 8px;
+  /* 編集・削除ボタンは通常操作（ドラッグ対象外） */
+  cursor: auto;
+}
+
+.tag-edit-btn {
+  border: 1px solid var(--btn-outline);
+  background: transparent;
+  color: var(--btn-outline);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.tag-delete-btn {
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* ===== データ管理モーダル ===== */
+.data-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+
+.data-section {
+  margin-bottom: 20px;
+}
+
+.data-note {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin: 6px 2px 0;
+  line-height: 1.5;
+}
+
+.data-error {
+  margin-top: 4px;
+}
+
+/* ===== 表示設定モーダル ===== */
+.settings-overlay {
+  z-index: 150;
+}
+
+.settings-modal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 16px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin: 0;
+}
+
+.settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text);
+}
+
+.settings-option-selected {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.settings-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-option-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-option-desc {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.settings-check {
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ===== 確認ダイアログ ===== */
+.confirm-overlay {
+  z-index: 200;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.confirm-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.confirm-tag {
+  margin: 0 0 12px;
+}
+
+.confirm-text {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-cancel,
+.confirm-delete {
+  flex: 1;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.confirm-cancel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.confirm-delete {
+  border: none;
+  background: var(--danger);
+  color: #fff;
+}
+
+.confirm-primary {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.confirm-cancel:disabled,
+.confirm-delete:disabled,
+.confirm-primary:disabled {
+  opacity: 0.6;
+}
+
+.edit-field-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+}
+
+.edit-field-label + .color-picker {
+  margin-bottom: 20px;
+}
+
+.rename-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.confirm-dialog .field-error {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ===== 絞り込みバー ===== */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.clear-all-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-sub);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+/* ===== グリッド・カード ===== */
+/* スマホは2列固定。広幅では列幅に応じて自動で列数が増える。 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* 広幅では列数を増やすが、最大4列まで。
+   各列でカードが十分広くなってから列を増やすため、閾値は高めに設定。 */
+@media (min-width: 820px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1120px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* リスト表示：1列・カードは横幅いっぱい。 */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  /* 長押し時の選択メニュー/テキスト選択を抑止 */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* 選択中のカード */
+.card-selected {
+  box-shadow: 0 0 0 3px var(--accent-ui);
+}
+
+/* 選択モードのチェックマーク（右上） */
+.card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-ui);
+  background: var(--surface);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.card-check.checked {
+  background: var(--accent-ui);
+}
+
+/* 代表画像サムネイル（一覧では控えめな大きさ） */
+.card-thumb {
+  margin: -2px 0 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.card-thumb img {
+  display: block;
+  width: 100%;
+  /* 横幅が縮むにつれて高さも少しだけ縮める（最小 80px・最大 96px） */
+  height: clamp(80px, 22vw, 96px);
+  object-fit: cover;
+}
+
+.card-yearmonth {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.card-name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.card-yearmonth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+/* ===== チップ ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: none;
+}
+
+.chip-clickable {
+  cursor: pointer;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ダークモードではタグの明るさを少しだけ抑える */
+:root[data-theme='dark'] .chip {
+  filter: brightness(0.85);
+}
+
+/* ===== FAB ===== */
+.fab {
+  position: fixed;
+  right: max(16px, calc((100vw - var(--content-max)) / 2 + 16px));
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== 元に戻す通知（トースト） ===== */
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 300; /* モーダル・確認ダイアログより前面 */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden; /* ゲージを角丸内に収める */
+}
+
+/* 残り時間ゲージ：下端で幅いっぱいから 0 へ縮む */
+.undo-toast-gauge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent-ui);
+  transform-origin: left;
+  animation: undo-gauge linear forwards;
+}
+
+@keyframes undo-gauge {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .undo-toast-gauge {
+    animation: none;
+  }
+}
+
+.undo-toast-msg {
+  font-size: 14px;
+}
+
+.undo-toast-btn {
+  border: none;
+  background: none;
+  color: var(--btn-outline);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+/* 操作失敗時のエラー通知 */
+.error-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 32px);
+  background: var(--danger);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.error-toast-msg {
+  font-size: 14px;
+}
+
+.error-toast-btn {
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+/* ===== 詳細画面 ===== */
+.detail {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  min-height: 100svh;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  padding: 4px 0;
+}
+
+/* 代表画像（詳細：一覧より大きく表示。押すと全画面表示） */
+.detail-photo {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: var(--bg);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.detail-photo img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.detail-name {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 8px 0 20px;
+}
+
+.detail-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0 0 24px;
+}
+
+.detail-fields dt {
+  color: var(--text-sub);
+  font-size: 14px;
+}
+
+.detail-fields dd {
+  margin: 0;
+}
+
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.action-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid var(--btn-outline);
+  background: var(--surface);
+  color: var(--btn-outline);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  /* リンク版（<a>）にも押下フィードバックを付ける */
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background-color 0.1s ease, color 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.action-btn:active {
+  transform: scale(0.96);
+}
+
+.action-btn.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.link-btn {
+  display: block;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border: none;
+  background: none;
+  color: var(--text-sub);
+  font-size: 15px;
+  padding: 0px 5px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, color 0.1s ease;
+}
+
+.link-btn:active {
+  transform: scale(0.96);
+  color: var(--text);
+}
+
+/* ===== シート ===== */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  /* 狭い画面でも本文（#root）と同じ下限幅を保ち、シート内容を潰さない */
+  min-width: var(--content-min);
+}
+
+.sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 90svh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  animation: slide-up 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-sub);
+  padding: 4px 8px;
+}
+
+.sheet-body {
+  padding: 16px;
+}
+
+.bulk-tag-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 12px;
+}
+
+/* ===== フォーム ===== */
+.exhibition-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.field input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ===== タグ入力 ===== */
+.tag-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-add-row input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tag-add-row button {
+  border: 1px solid var(--btn-outline);
+  background: transparent;
+  color: var(--btn-outline);
+  border-radius: 8px;
+  padding: 0 16px;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-suggestions-label {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+/* ===== タグ色スウォッチ ===== */
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.swatch-selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+/* ===== チケット写真フィールド ===== */
+.photo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-preview img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-sub);
+  font-size: 14px;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.photo-btn {
+  border: 1px solid var(--btn-outline);
+  background: transparent;
+  color: var(--btn-outline);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.photo-btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.photo-btn:disabled {
+  opacity: 0.5;
+}
+
+.photo-info {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+/* ===== 写真ビューア ===== */
+.viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.viewer-img {
+  max-width: 100%;
+  max-height: 90svh;
+  object-fit: contain;
+}
+
+.viewer-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 18px;
+}
+
+/* ===== 押下時の色反転（縮小に加えて文字色↔背景色を入れ替える） ===== */
+/* アクセント系（枠線ボタン）：押すとアクセント色で塗りつぶす */
+.action-btn:not(.danger):active {
+  background: var(--accent);
+  border-color: var(--accent-ui);
+  color: var(--accent-text);
+}
+
+/* --btn-outline 枠線ボタン（詳細の編集・タグ編集・タグ追加・画像を選択）：押すと塗りつぶす */
+.photo-btn:not(.danger):active,
+.tag-edit-btn:active,
+.tag-add-row button:active,
+.detail-actions .action-btn:not(.danger):active {
+  background: var(--btn-outline);
+  border-color: var(--btn-outline);
+  color: var(--surface);
+}
+
+/* アクセント系（塗りボタン）・FAB：押すと明色地＋アクセント文字に反転 */
+.primary-btn:active,
+.confirm-primary:active,
+.fab:active {
+  background: var(--accent-text);
+  color: var(--accent);
+}
+
+/* 危険系：押すと danger 色で塗りつぶす */
+.tag-delete-btn:active,
+.action-btn.danger:active,
+.photo-btn.danger:active,
+.confirm-delete:active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* 中立系：押すと文字色↔背景色を反転 */
+.confirm-cancel:active,
+.menu-item:active {
+  background: var(--text);
+  color: var(--surface);
+}
+
+/* ダークモード：アクセントは明るいティールで反転 */
+:root[data-theme='dark'] .action-btn:not(.danger):active {
+  background: var(--accent);
+  border-color: var(--accent-ui);
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .primary-btn:active,
+:root[data-theme='dark'] .confirm-primary:active,
+:root[data-theme='dark'] .fab:active {
+  background: #1f60b4;
+  color: var(--accent-ui);
+}
+
+/* ダークでも詳細の編集ボタンは btn-outline 反転（タグ編集ボタンと統一） */
+:root[data-theme='dark'] .detail-actions .action-btn:not(.danger):active {
+  background: var(--btn-outline);
+  border-color: var(--btn-outline);
+  color: var(--surface);
+}

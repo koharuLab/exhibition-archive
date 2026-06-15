@@ -1,0 +1,76 @@
+:root {
+  --text: #1f2430;
+  --text-sub: #6b7280;
+  --bg: #f5f5f7;
+  --surface: #fff;
+  --border: #e3e3e8;
+  --accent: #1f366b;
+  --accent-ui: #1d2e57;
+  --accent-text: #fff;
+  --btn-outline: #1d2e57;
+  --danger: #d9534f;
+  --chip-bg: #dce7ff;
+  --chip-text: #4b40d6;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* コンテンツ全体の最大幅（これを超える広幅画面では中央寄せ） */
+  --content-max: 1400px;
+  /* コンテンツ全体の最小幅（これより狭い画面では潰さず横スクロールさせる） */
+  --content-min: 360px;
+
+  font-family: system-ui, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ダークテーマ：OS 設定には連動させず、data-theme での明示選択のみ。 */
+:root[data-theme='dark'] {
+  --text: #d8d8d8;
+  --text-sub: #9ca3af;
+  --bg: #16171d;
+  --surface: #21232c;
+  --border: #33353f;
+  --accent: #1f366b;
+  --accent-ui: #3b5fa7;
+  --accent-text: #d3d3d3;
+  --btn-outline: #88a9e2;
+  --chip-bg: #1d2e57;
+  --chip-text: #c4bdff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: var(--content-max);
+  /* これより狭いビューポートではレイアウトを縮めず、横スクロールで全体を保つ */
+  min-width: var(--content-min);
+  margin: 0 auto;
+  min-height: 100svh;
+  background: var(--bg);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  /* 押下フィードバック（軽く沈む＋文字色/背景色の反転）。OS 既定のタップ点滅は無効化して統一する */
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background-color 0.1s ease, color 0.1s ease,
+    border-color 0.1s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+input {
+  font: inherit;
+}
