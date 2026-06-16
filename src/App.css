@@ -122,6 +122,7 @@
   border-radius: 12px;
   box-shadow: var(--shadow);
   padding: 6px;
+  min-width: 188px;
 }
 
 .menu-item {
@@ -131,8 +132,8 @@
   background: none;
   border: none;
   color: var(--text);
-  font-size: 15px;
-  padding: 10px 12px;
+  font-size: 16px;
+  padding: 12px 14px;
   border-radius: 8px;
 }
 
@@ -414,9 +415,20 @@
   gap: 10px;
 }
 
-/* 選択肢が3つあるとき（未保存確認）は縦並びにして文言が潰れないようにする */
-.confirm-actions-stack {
-  flex-direction: column;
+/* 選択肢が3つあるとき（未保存確認）は横並び。文字サイズは既定のまま、
+   ダイアログ幅を広げ、間隔と左右パディングを少し詰めて折り返さないようにする */
+.confirm-dialog-wide {
+  max-width: 440px;
+}
+
+.confirm-actions-3 {
+  gap: 8px;
+}
+
+.confirm-actions-3 button {
+  padding-left: 6px;
+  padding-right: 6px;
+  white-space: nowrap;
 }
 
 .confirm-cancel,
@@ -668,8 +680,8 @@
 /* ===== FAB ===== */
 .fab {
   position: fixed;
-  right: max(16px, calc((100vw - var(--content-max)) / 2 + 16px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: max(18px, calc((100vw - var(--content-max)) / 2 + 16px));
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -781,6 +793,16 @@
 }
 
 /* ===== 詳細画面 ===== */
+/* 詳細レイヤーの背後（一覧の上）に敷く暗幕。スワイプ中だけ不透明度を上げて一覧を少し暗くする */
+.detail-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 89; /* 一覧より上、詳細レイヤー(90)より下 */
+  background: #000;
+  opacity: 0;
+  pointer-events: none; /* タッチは詳細レイヤーが受ける */
+}
+
 .detail {
   /* 一覧の上に重ねる全画面レイヤー。背後に一覧が残り、右スワイプ中だけ左側に見える。
      z-index は一覧(isolate)より上、各種シート/確認/トースト(100+)より下に置く。 */
@@ -976,6 +998,11 @@
   padding: 4px 8px;
 }
 
+/* タグ管理・データ管理・表示設定モーダルのヘッダー×は少しだけ大きく（追加/編集シートは対象外） */
+.modal-header .icon-btn {
+  font-size: 22px;
+}
+
 .sheet-body {
   /* 下端（ホームバー等のセーフエリア含む）に余白を足し、
      保存ボタンが画面下に張り付いて低く見えないようにする */
@@ -1017,6 +1044,34 @@
   padding: 10px 12px;
   background: var(--bg);
   color: var(--text);
+}
+
+/* 年月入力：年（数字）と月（選択）を横並びにする */
+.year-month-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-input {
+  width: 6em; /* 4桁＋余白。スマホでも押しやすい幅 */
+  flex: 0 0 auto;
+}
+
+.ym-suffix {
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.month-select {
+  flex: 0 0 auto;
+  min-width: 4.5em;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
 }
 
 .field-error {

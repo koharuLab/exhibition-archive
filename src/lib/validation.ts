@@ -1,6 +1,5 @@
 // 入力チェック・正規化（仕様 §15 入力チェック仕様）
 import type { Exhibition, ExhibitionFormInput } from '../types';
-import { parseToInternal } from './date';
 
 export interface ValidationResult {
   /** 検証・正規化に成功した場合の保存用フィールド */
@@ -41,10 +40,14 @@ export function validateForm(input: ExhibitionFormInput): ValidationResult {
     errors.name = '展覧会名は必須です';
   }
 
-  // 訪問年月：必須・形式チェック・内部形式へ統一
-  const visitYearMonth = parseToInternal(input.visitYearMonth);
-  if (visitYearMonth === null) {
-    errors.visitYearMonth = '訪問年月は YYYY/MM 形式で入力してください';
+  // 年月：年が4桁の数字・月が1〜12のとき有効。内部形式 "YYYY-MM" へ統一
+  const year = input.visitYear.trim();
+  const month = Number(input.visitMonth);
+  let visitYearMonth: string | null = null;
+  if (!/^\d{4}$/.test(year) || !(month >= 1 && month <= 12)) {
+    errors.visitYearMonth = '年月を入力してください';
+  } else {
+    visitYearMonth = `${year}-${String(month).padStart(2, '0')}`;
   }
 
   // 会場名：任意・trim・空は未登録扱い

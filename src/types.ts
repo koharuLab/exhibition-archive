@@ -47,8 +47,10 @@ export type PhotoIntent =
 /** 追加・編集フォームの入力値（生の文字列。保存前に検証・正規化する）。 */
 export interface ExhibitionFormInput {
   name: string;
-  /** "YYYY/MM" または "YYYY-MM" を受け付ける */
-  visitYearMonth: string;
+  /** 年（4桁の数字文字列）。保存時に月と結合して内部形式 "YYYY-MM" にする */
+  visitYear: string;
+  /** 月（"1"〜"12" の選択値。未選択は ""） */
+  visitMonth: string;
   venue: string;
   url: string;
   tags: string[];

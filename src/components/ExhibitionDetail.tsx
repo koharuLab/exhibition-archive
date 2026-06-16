@@ -51,30 +51,45 @@ export function ExhibitionDetail({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const EXIT_MS = prefersReduced ? 0 : 200; // 戻る成功：右へ抜ける
   const SNAP_MS = prefersReduced ? 0 : 180; // 戻る失敗：元位置へ戻す
+  const DIM_MAX = 0.25; // スワイプし切ったときの背景の暗さ（少しだけ）
   const detailRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null); // 背後の一覧を暗くする暗幕
   const swipeRef = useRef({ tracking: false, dragging: false, startX: 0, startY: 0, dx: 0 });
   const timerRef = useRef<number | null>(null);
 
   // ジェスチャを有効にできる状態か（シート・画像拡大・削除ダイアログ表示中は無効）
   const swipeActive = swipeBackEnabled && !confirmOpen;
 
-  // 詳細画面の transform を更新する。x>0 のときだけ translateX を当て、
-  // 左側に背景が見えるよう左端に影も付ける。指に追従中(durationMs=0)は transition なし。
+  // 詳細画面の transform と背景の暗幕を更新する。x>0 のときだけ右へずらし、
+  // 移動量に比例して背後の一覧を少しだけ暗くする。指に追従中(durationMs=0)は transition なし。
   const applyTransform = (x: number, durationMs: number) => {
     const el = detailRef.current;
-    if (!el) return;
-    el.style.transition = durationMs > 0 ? `transform ${durationMs}ms ease` : 'none';
-    el.style.transform = `translateX(${Math.max(0, x)}px)`;
-    el.style.boxShadow = x > 0 ? '-8px 0 24px rgba(0, 0, 0, 0.15)' : '';
+    if (el) {
+      el.style.transition = durationMs > 0 ? `transform ${durationMs}ms ease` : 'none';
+      el.style.transform = `translateX(${Math.max(0, x)}px)`;
+      el.style.boxShadow = x > 0 ? '-8px 0 24px rgba(0, 0, 0, 0.15)' : '';
+    }
+    const scrim = scrimRef.current;
+    if (scrim) {
+      const w = window.innerWidth || 1;
+      scrim.style.transition = durationMs > 0 ? `opacity ${durationMs}ms ease` : 'none';
+      scrim.style.opacity = String((Math.min(1, Math.max(0, x) / w)) * DIM_MAX);
+    }
   };
 
-  // transform を完全に消す（position:fixed の戻るボタンを元の固定挙動に戻すため）
+  // transform・暗幕を完全に消す（position:fixed の戻るボタンを元の固定挙動に戻すため）
   const clearTransform = () => {
     const el = detailRef.current;
-    if (!el) return;
-    el.style.transition = '';
-    el.style.transform = '';
-    el.style.boxShadow = '';
+    if (el) {
+      el.style.transition = '';
+      el.style.transform = '';
+      el.style.boxShadow = '';
+    }
+    const scrim = scrimRef.current;
+    if (scrim) {
+      scrim.style.transition = '';
+      scrim.style.opacity = ''; // CSS 既定（0）へ戻す
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -125,8 +140,8 @@ export function ExhibitionDetail({
     s.dragging = false;
     if (!wasDragging) return;
 
-    // 画面幅の40% か 160px の小さい方を超えたら戻る（判定をやや遅めにする）
-    const trigger = Math.min(window.innerWidth * 0.4, 160);
+    // 画面幅の50%を超えたら戻る
+    const trigger = window.innerWidth * 0.4;
     if (s.dx >= trigger) {
       // 戻る成功：右へ抜けるアニメーション(200ms)のあと一覧へ
       applyTransform(window.innerWidth, EXIT_MS);
@@ -203,7 +218,10 @@ export function ExhibitionDetail({
   };
 
   return (
-    <div
+    <>
+      {/* スワイプ中に背後の一覧を少しだけ暗くする暗幕（不透明度は applyTransform が制御） */}
+      <div className="detail-scrim" ref={scrimRef} aria-hidden="true" />
+      <div
       className="detail"
       ref={detailRef}
       onTouchStart={handleTouchStart}
@@ -231,7 +249,7 @@ export function ExhibitionDetail({
       <h1 className="detail-name">{exhibition.name}</h1>
 
       <dl className="detail-fields">
-        <dt>訪問年月</dt>
+        <dt>年月</dt>
         <dd>{formatForDisplay(exhibition.visitYearMonth)}</dd>
 
         {exhibition.venue && (
@@ -318,6 +336,7 @@ export function ExhibitionDetail({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
