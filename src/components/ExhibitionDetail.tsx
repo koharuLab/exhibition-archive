@@ -125,8 +125,8 @@ export function ExhibitionDetail({
     s.dragging = false;
     if (!wasDragging) return;
 
-    // 画面幅の28% か 100px の小さい方を超えたら戻る（どちらかを満たせば成立）
-    const trigger = Math.min(window.innerWidth * 0.28, 100);
+    // 画面幅の40% か 160px の小さい方を超えたら戻る（判定をやや遅めにする）
+    const trigger = Math.min(window.innerWidth * 0.4, 160);
     if (s.dx >= trigger) {
       // 戻る成功：右へ抜けるアニメーション(200ms)のあと一覧へ
       applyTransform(window.innerWidth, EXIT_MS);
