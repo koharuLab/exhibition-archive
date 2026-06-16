@@ -1,5 +1,5 @@
 // 展覧会詳細画面（仕様 §5）。
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Exhibition } from '../types';
 import { formatForDisplay } from '../lib/date';
 import { useTagColors } from '../context/tagColorContext';
@@ -163,10 +163,32 @@ export function ExhibitionDetail({
     const el = detailRef.current;
     if (!el) return;
     const onTouchMove = (ev: TouchEvent) => {
-      if (swipeRef.current.dragging) ev.preventDefault();
+      const s = swipeRef.current;
+      if (!s.tracking || ev.touches.length !== 1) return;
+      const t = ev.touches[0];
+      const dx = t.clientX - s.startX;
+      const dy = t.clientY - s.startY;
+      // 横優位（戻りジェスチャ）なら dragging 確定を待たずスクロールを止める。
+      // これで「確定する最初の移動」や速いスワイプでも背景／詳細が一緒に動かない。
+      if (s.dragging || (dx > 0 && Math.abs(dx) > Math.abs(dy))) ev.preventDefault();
     };
     el.addEventListener('touchmove', onTouchMove, { passive: false });
     return () => el.removeEventListener('touchmove', onTouchMove);
+  }, []);
+
+  // 詳細レイヤー表示中は背後の一覧（body）スクロールをロックする。
+  // useLayoutEffect で描画前に同期実行し、遷移直後でも一覧の慣性スクロールを即停止する。
+  // overflow を変えるだけなので一覧のスクロール位置は保持される。
+  useLayoutEffect(() => {
+    const { body, documentElement: html } = document;
+    const prevBody = body.style.overflow;
+    const prevHtml = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = prevBody;
+      html.style.overflow = prevHtml;
+    };
   }, []);
 
   const handleConfirmDelete = async () => {
