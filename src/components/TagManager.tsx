@@ -1,6 +1,6 @@
 // タグ管理モーダル（一覧画面に重ねて表示・スマホではほぼ全画面）。
 // 使用中タグと件数の表示、タグ削除、タグ編集（名前＋色／統合）。
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TagCount } from '../db/exhibitions';
 import { useTagColors } from '../context/tagColorContext';
 import { TAG_PALETTE, DEFAULT_TAG_COLOR, getSwatchBackground } from '../lib/tagColors';
@@ -33,8 +33,14 @@ export function TagManager({
 
   // ドラッグ並び替えの状態
   const listRef = useRef<HTMLUListElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null); // 自動スクロール対象（タグ一覧のスクロールコンテナ）
   const rectsRef = useRef<DOMRect[]>([]);
   const startYRef = useRef(0);
+  const fromRef = useRef(-1); // ドラッグ開始時の行インデックス（自動スクロールの再計算で使用）
+  const startScrollTopRef = useRef(0); // ドラッグ開始時のコンテナ scrollTop（追従補正の基準）
+  const lastClientYRef = useRef(0); // 直近のポインタ Y（指が止まっていても自動スクロールで再計算するため）
+  const rafRef = useRef<number | null>(null); // 自動スクロールの requestAnimationFrame id
+  const autoScrollSpeedRef = useRef(0); // 自動スクロール速度(px/frame, 符号=方向)。0 で停止
   const draggingRef = useRef(false); // ドラッグ実行中か（touchmove のスクロール抑止に使用）
   const longPressRef = useRef<number | null>(null); // タッチ長押し判定タイマ
   const pendingRef = useRef<
@@ -45,8 +51,12 @@ export function TagManager({
   const [dragHeight, setDragHeight] = useState(0); // ドラッグ中の行の高さ(px)
   const [dropIndex, setDropIndex] = useState<number | null>(null); // 挿入位置(0..n)
 
+  // 自動スクロール設定：コンテナ端からこの距離内に入ったら開始し、端に近いほど速くする
+  const AUTO_SCROLL_EDGE = 72; // 端からの判定距離(px)
+  const AUTO_SCROLL_MAX = 14; // 1フレームあたりの最大スクロール量(px)
+
   // タッチ長押し設定（押下後この時間ほぼ静止でドラッグ開始）
-  const LONG_PRESS_MS = 350;
+  const LONG_PRESS_MS = 150;
   const MOVE_CANCEL_PX = 10; // 待機中にこれ以上動いたらスクロール扱いで解除
 
   // 長押し待機をキャンセルする
@@ -63,6 +73,9 @@ export function TagManager({
     const rows = listRef.current?.querySelectorAll('.tag-manage-row') ?? [];
     rectsRef.current = Array.from(rows, (r) => r.getBoundingClientRect());
     startYRef.current = clientY;
+    fromRef.current = index;
+    startScrollTopRef.current = scrollRef.current?.scrollTop ?? 0; // 追従補正の基準
+    lastClientYRef.current = clientY;
     draggingRef.current = true;
     setDragKey(orderedTags[index].tag);
     setDropIndex(index);
@@ -73,6 +86,7 @@ export function TagManager({
     } catch {
       // 一部環境で失敗しうるが無視してよい
     }
+    startAutoScroll(); // ドラッグ中のみ自動スクロールの RAF ループを回す
     navigator.vibrate?.(10); // 開始の触覚フィードバック（対応端末のみ）
   };
 
@@ -101,30 +115,20 @@ export function TagManager({
     }
   };
 
-  // ポインタ移動：待機中は移動でキャンセル、ドラッグ中は挿入位置を更新する。
-  // 判定はポインタ位置ではなく「ドラッグ中タグ内部の判定線」を使い、
-  // タグがある程度食い込んでから挿入位置が切り替わるようにする。
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (dragKey === null) {
-      const p = pendingRef.current;
-      if (
-        p &&
-        (Math.abs(e.clientY - p.y) > MOVE_CANCEL_PX ||
-          Math.abs(e.clientX - p.x) > MOVE_CANCEL_PX)
-      ) {
-        clearLongPress(); // スクロール/タップとみなして長押しを取り消す
-      }
-      return;
-    }
-
+  // ドラッグ中の行位置と挿入位置を計算して反映する。
+  // 自動スクロールでコンテナがずれるため、開始時からの scrollTop 差分(scrollDelta)で
+  // 補正し、掴んだタグが指/カーソルに追従し続けるようにする。ref だけ読むので RAF からも呼べる。
+  const updateDrag = useCallback((clientY: number) => {
     const rects = rectsRef.current;
-    const from = orderedTags.findIndex((t) => t.tag === dragKey);
+    const from = fromRef.current;
     if (from < 0 || rects.length === 0) return;
+
+    const scrollDelta = (scrollRef.current?.scrollTop ?? 0) - startScrollTopRef.current;
 
     // 行の範囲内に収め、モーダル外へ飛び出さないようにする
     const minDy = rects[0].top - rects[from].top;
     const maxDy = rects[rects.length - 1].bottom - rects[from].bottom;
-    const dy = Math.max(minDy, Math.min(maxDy, e.clientY - startYRef.current));
+    const dy = Math.max(minDy, Math.min(maxDy, clientY - startYRef.current + scrollDelta));
     setDragY(dy);
 
     const h = rects[from].height;
@@ -148,13 +152,79 @@ export function TagManager({
       idx = k + 1;
     }
     setDropIndex(idx);
+  }, []);
+
+  // ポインタ位置からコンテナ端への近さを見て自動スクロール速度を決める。
+  // 端に近いほど速く、判定距離(AUTO_SCROLL_EDGE)の外では 0（停止）。
+  const updateAutoScrollSpeed = useCallback((clientY: number) => {
+    const c = scrollRef.current;
+    if (!c) {
+      autoScrollSpeedRef.current = 0;
+      return;
+    }
+    const r = c.getBoundingClientRect();
+    if (clientY < r.top + AUTO_SCROLL_EDGE) {
+      const ratio = Math.min(1, (r.top + AUTO_SCROLL_EDGE - clientY) / AUTO_SCROLL_EDGE);
+      autoScrollSpeedRef.current = -AUTO_SCROLL_MAX * ratio; // 上方向
+    } else if (clientY > r.bottom - AUTO_SCROLL_EDGE) {
+      const ratio = Math.min(1, (clientY - (r.bottom - AUTO_SCROLL_EDGE)) / AUTO_SCROLL_EDGE);
+      autoScrollSpeedRef.current = AUTO_SCROLL_MAX * ratio; // 下方向
+    } else {
+      autoScrollSpeedRef.current = 0;
+    }
+  }, []);
+
+  // 自動スクロールの RAF ループ。速度ぶんコンテナをスクロールし、
+  // 指が止まっていても挿入位置を更新する。ドラッグ中だけ回し、終了時に止める。
+  const startAutoScroll = useCallback(() => {
+    if (rafRef.current !== null) return;
+    const tick = () => {
+      const c = scrollRef.current;
+      const speed = autoScrollSpeedRef.current;
+      if (c && speed !== 0) {
+        const before = c.scrollTop;
+        c.scrollTop += speed;
+        if (c.scrollTop !== before) updateDrag(lastClientYRef.current);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [updateDrag]);
+
+  const stopAutoScroll = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    autoScrollSpeedRef.current = 0;
+  }, []);
+
+  // ポインタ移動：待機中は移動でキャンセル、ドラッグ中は挿入位置と自動スクロール速度を更新する。
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragKey === null) {
+      const p = pendingRef.current;
+      if (
+        p &&
+        (Math.abs(e.clientY - p.y) > MOVE_CANCEL_PX ||
+          Math.abs(e.clientX - p.x) > MOVE_CANCEL_PX)
+      ) {
+        clearLongPress(); // スクロール/タップとみなして長押しを取り消す
+      }
+      return;
+    }
+
+    lastClientYRef.current = e.clientY;
+    updateDrag(e.clientY);
+    updateAutoScrollSpeed(e.clientY); // 端付近なら自動スクロール開始（速度を更新）
   };
 
   // ポインタ解放/キャンセル：長押し待機を解除し、ドラッグ中なら順序を確定して永続化する
   const handlePointerEnd = () => {
     clearLongPress();
+    stopAutoScroll(); // ドラッグ終了/キャンセル時は必ず自動スクロールを止める
     if (dragKey === null) return;
     draggingRef.current = false;
+    fromRef.current = -1;
     const names = orderedTags.map((t) => t.tag);
     const from = names.indexOf(dragKey);
     const target = dropIndex ?? from;
@@ -180,8 +250,11 @@ export function TagManager({
     return () => el.removeEventListener('touchmove', onTouchMove);
   }, []);
 
-  // アンマウント時に長押しタイマを後始末する
-  useEffect(() => () => clearLongPress(), []);
+  // アンマウント時に長押しタイマと自動スクロールの RAF を後始末する
+  useEffect(() => () => {
+    clearLongPress();
+    stopAutoScroll();
+  }, [stopAutoScroll]);
 
   // 削除確認の対象
   const [pendingDelete, setPendingDelete] = useState<TagCount | null>(null);
@@ -299,7 +372,7 @@ export function TagManager({
           </button>
         </header>
 
-        <div className="modal-body">
+        <div className="modal-body" ref={scrollRef}>
           {tagCounts.length === 0 ? (
             <p className="empty-state">使用中のタグはありません。</p>
           ) : (
