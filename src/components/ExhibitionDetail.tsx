@@ -1,5 +1,5 @@
 // 展覧会詳細画面（仕様 §5）。
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Exhibition } from '../types';
 import { formatForDisplay } from '../lib/date';
 import { useTagColors } from '../context/tagColorContext';
@@ -39,18 +39,42 @@ export function ExhibitionDetail({
   useEscapeKey(() => setConfirmOpen(false), confirmOpen && !busy);
 
   // 右スワイプで一覧へ戻るジェスチャ（カード詳細画面のみ）。
-  // 画面左端(40px以内)から始まり、右へ80px以上・縦移動40px以内のときだけ発火する。
-  // 縦移動が大きければ通常スクロール扱い。preventDefault しないのでスクロールは壊さない。
+  // 画面左端(40px以内)から始まる横スワイプで、詳細画面全体を指に追従させて右へ動かす。
+  // 縦が勝る動きはスクロール扱いで解除し、左方向には反応しない。
+  // 離したとき閾値を超えていれば右へ抜けて一覧へ、未満なら元位置へ戻す。
   const EDGE_START_PX = 40; // この距離以内の左端から始めたときだけ対象
-  const SWIPE_BACK_PX = 80; // 右方向にこれ以上動いたら戻る
-  const VERTICAL_CANCEL_PX = 40; // 縦移動がこれを超えたらスクロール扱いで無効
-  const swipeRef = useRef({ tracking: false, startX: 0, startY: 0 });
+  const VERTICAL_CANCEL_PX = 70; // 縦移動がこれを超え、かつ横より縦が大きければスクロール扱い
+  const DIRECTION_COMMIT_PX = 12; // 横が縦より勝りこの距離動いたら横スワイプとして確定
+  const EXIT_MS = 200; // 戻る／復帰アニメーションの長さ
+  const detailRef = useRef<HTMLDivElement>(null);
+  const swipeRef = useRef({ tracking: false, dragging: false, startX: 0, startY: 0, dx: 0 });
+  const timerRef = useRef<number | null>(null);
 
   // ジェスチャを有効にできる状態か（シート・画像拡大・削除ダイアログ表示中は無効）
   const swipeActive = swipeBackEnabled && !confirmOpen;
 
+  // 詳細画面の transform を更新する。x>0 のときだけ translateX を当て、
+  // 左側に背景が見えるよう左端に影も付ける。指に追従中は transition なし、離した後は有効。
+  const applyTransform = (x: number, withTransition: boolean) => {
+    const el = detailRef.current;
+    if (!el) return;
+    el.style.transition = withTransition ? `transform ${EXIT_MS}ms ease` : 'none';
+    el.style.transform = `translateX(${Math.max(0, x)}px)`;
+    el.style.boxShadow = x > 0 ? '-8px 0 24px rgba(0, 0, 0, 0.15)' : '';
+  };
+
+  // transform を完全に消す（position:fixed の戻るボタンを元の固定挙動に戻すため）
+  const clearTransform = () => {
+    const el = detailRef.current;
+    if (!el) return;
+    el.style.transition = '';
+    el.style.transform = '';
+    el.style.boxShadow = '';
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     const s = swipeRef.current;
+    s.dragging = false;
     if (!swipeActive || e.touches.length !== 1) {
       s.tracking = false;
       return;
@@ -60,6 +84,7 @@ export function ExhibitionDetail({
       s.tracking = true;
       s.startX = t.clientX;
       s.startY = t.clientY;
+      s.dx = 0;
     } else {
       s.tracking = false;
     }
@@ -68,21 +93,63 @@ export function ExhibitionDetail({
   const handleTouchMove = (e: React.TouchEvent) => {
     const s = swipeRef.current;
     if (!s.tracking) return;
-    // 縦移動が大きくなったらスクロールとみなして追跡をやめる
-    if (Math.abs(e.touches[0].clientY - s.startY) > VERTICAL_CANCEL_PX) {
-      s.tracking = false;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+
+    if (!s.dragging) {
+      // 方向確定前：縦が勝てばスクロール扱いで解除、横が明らかに勝れば横スワイプ確定
+      if (Math.abs(dy) > VERTICAL_CANCEL_PX && Math.abs(dy) > Math.abs(dx)) {
+        s.tracking = false;
+        return;
+      }
+      if (dx > DIRECTION_COMMIT_PX && Math.abs(dx) > Math.abs(dy)) s.dragging = true;
+      else return;
+    }
+
+    // 横スワイプ中：左方向は無視（>=0）、指に追従（transition なし）
+    const x = Math.max(0, dx);
+    s.dx = x;
+    applyTransform(x, false);
+  };
+
+  const handleTouchEnd = () => {
+    const s = swipeRef.current;
+    const wasDragging = s.tracking && s.dragging;
+    s.tracking = false;
+    s.dragging = false;
+    if (!wasDragging) return;
+
+    // 画面幅の28% か 100px の小さい方を超えたら戻る（どちらかを満たせば成立）
+    const trigger = Math.min(window.innerWidth * 0.28, 100);
+    if (s.dx >= trigger) {
+      // 右へ抜けるアニメーションのあと一覧へ
+      applyTransform(window.innerWidth, true);
+      timerRef.current = window.setTimeout(onBack, EXIT_MS);
+    } else {
+      // 閾値未満：元の位置へ戻し、アニメーション後に transform を消す
+      applyTransform(0, true);
+      timerRef.current = window.setTimeout(clearTransform, EXIT_MS);
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchCancel = () => {
     const s = swipeRef.current;
-    if (!s.tracking) return;
+    if (s.tracking && s.dragging) {
+      applyTransform(0, true);
+      timerRef.current = window.setTimeout(clearTransform, EXIT_MS);
+    }
     s.tracking = false;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - s.startX;
-    const dy = t.clientY - s.startY;
-    if (dx >= SWIPE_BACK_PX && Math.abs(dy) <= VERTICAL_CANCEL_PX) onBack();
+    s.dragging = false;
   };
+
+  // アンマウント時に保留中のアニメーション用タイマを後始末する
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const handleConfirmDelete = async () => {
     setBusy(true);
@@ -98,12 +165,11 @@ export function ExhibitionDetail({
   return (
     <div
       className="detail"
+      ref={detailRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onTouchCancel={() => {
-        swipeRef.current.tracking = false;
-      }}
+      onTouchCancel={handleTouchCancel}
     >
       <header className="detail-header">
         <button type="button" className="back-btn" onClick={onBack}>
