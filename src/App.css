@@ -680,10 +680,10 @@
 /* ===== FAB ===== */
 .fab {
   position: fixed;
-  right: max(18px, calc((100vw - var(--content-max)) / 2 + 16px));
+  right: max(20px, calc((100vw - var(--content-max)) / 2 + 16px));
   bottom: calc(22px + env(safe-area-inset-bottom, 0px));
-  width: 64px;
-  height: 64px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   border: none;
   background: var(--accent);

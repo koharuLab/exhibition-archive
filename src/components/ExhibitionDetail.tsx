@@ -51,7 +51,7 @@ export function ExhibitionDetail({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const EXIT_MS = prefersReduced ? 0 : 200; // 戻る成功：右へ抜ける
   const SNAP_MS = prefersReduced ? 0 : 180; // 戻る失敗：元位置へ戻す
-  const DIM_MAX = 0.25; // スワイプし切ったときの背景の暗さ（少しだけ）
+  const DIM_MAX = 0.55; // 背景の最大の暗さ（スワイプ量が小さいときに最も暗い）
   const detailRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null); // 背後の一覧を暗くする暗幕
   const swipeRef = useRef({ tracking: false, dragging: false, startX: 0, startY: 0, dx: 0 });
@@ -60,8 +60,9 @@ export function ExhibitionDetail({
   // ジェスチャを有効にできる状態か（シート・画像拡大・削除ダイアログ表示中は無効）
   const swipeActive = swipeBackEnabled && !confirmOpen;
 
-  // 詳細画面の transform と背景の暗幕を更新する。x>0 のときだけ右へずらし、
-  // 移動量に比例して背後の一覧を少しだけ暗くする。指に追従中(durationMs=0)は transition なし。
+  // 詳細画面の transform と背景の暗幕を更新する。x>0 のときだけ右へずらす。
+  // 暗さはスワイプ量が小さいほど濃く、進むほど薄くする（戻し切ると 0 で明るい）。
+  // 指に追従中(durationMs=0)は transition なし。
   const applyTransform = (x: number, durationMs: number) => {
     const el = detailRef.current;
     if (el) {
@@ -72,8 +73,9 @@ export function ExhibitionDetail({
     const scrim = scrimRef.current;
     if (scrim) {
       const w = window.innerWidth || 1;
+      const progress = Math.min(1, Math.max(0, x) / w); // 0=未スワイプ, 1=画面幅ぶん
       scrim.style.transition = durationMs > 0 ? `opacity ${durationMs}ms ease` : 'none';
-      scrim.style.opacity = String((Math.min(1, Math.max(0, x) / w)) * DIM_MAX);
+      scrim.style.opacity = String(DIM_MAX * (1 - progress));
     }
   };
 
@@ -141,7 +143,7 @@ export function ExhibitionDetail({
     if (!wasDragging) return;
 
     // 画面幅の50%を超えたら戻る
-    const trigger = window.innerWidth * 0.4;
+    const trigger = window.innerWidth * 0.45;
     if (s.dx >= trigger) {
       // 戻る成功：右へ抜けるアニメーション(200ms)のあと一覧へ
       applyTransform(window.innerWidth, EXIT_MS);
