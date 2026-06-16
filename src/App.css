@@ -412,6 +412,11 @@
   gap: 10px;
 }
 
+/* 選択肢が3つあるとき（未保存確認）は縦並びにして文言が潰れないようにする */
+.confirm-actions-stack {
+  flex-direction: column;
+}
+
 .confirm-cancel,
 .confirm-delete {
   flex: 1;
@@ -442,6 +447,18 @@
   font-weight: 600;
   background: var(--accent);
   color: var(--accent-text);
+}
+
+/* 破棄ボタン：主張を抑え、枠線と文字だけ赤くする（押下時は塗りに反転） */
+.confirm-discard {
+  flex: 1;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .confirm-cancel:disabled,
@@ -775,9 +792,17 @@
   display: flex;
   align-items: center;
   margin-bottom: 8px;
+  /* 戻るボタンは fixed で浮かせるため、その高さぶんだけ場所を確保する */
+  min-height: 40px;
 }
 
+/* 戻るボタン：枠や背景は付けず、「←戻る」の文字だけをスクロールに追従させて画面左上に固定する。
+   left はコンテンツ左端に合わせる（FAB の right 指定と対称）。 */
 .back-btn {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: max(16px, calc((100vw - var(--content-max)) / 2 + 16px));
+  z-index: 50;
   background: none;
   border: none;
   color: var(--text);
@@ -1188,7 +1213,8 @@
 .tag-delete-btn:active,
 .action-btn.danger:active,
 .photo-btn.danger:active,
-.confirm-delete:active {
+.confirm-delete:active,
+.confirm-discard:active {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;

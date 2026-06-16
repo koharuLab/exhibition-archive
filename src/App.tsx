@@ -230,6 +230,8 @@ export default function App() {
       <>
         <ExhibitionDetail
           exhibition={detailExhibition}
+          // シート・画像拡大の表示中は右スワイプ戻るを無効化する
+          swipeBackEnabled={sheet === null && viewerPhotoId === null}
           onBack={() => setView({ kind: 'list' })}
           onEdit={() => setSheet({ mode: 'edit', id: detailExhibition.id })}
           onViewPhoto={() => {

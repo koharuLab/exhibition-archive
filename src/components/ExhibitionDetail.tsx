@@ -1,5 +1,5 @@
 // 展覧会詳細画面（仕様 §5）。
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Exhibition } from '../types';
 import { formatForDisplay } from '../lib/date';
 import { useTagColors } from '../context/tagColorContext';
@@ -14,6 +14,8 @@ interface ExhibitionDetailProps {
   onEdit: () => void;
   onDelete: () => void | Promise<void>;
   onViewPhoto: () => void;
+  /** 右スワイプで戻るジェスチャを有効にするか（シートや画像拡大の表示中は false） */
+  swipeBackEnabled: boolean;
 }
 
 export function ExhibitionDetail({
@@ -22,6 +24,7 @@ export function ExhibitionDetail({
   onEdit,
   onDelete,
   onViewPhoto,
+  swipeBackEnabled,
 }: ExhibitionDetailProps) {
   const { order } = useTagColors();
   // タグ管理で設定した表示順に従う
@@ -35,6 +38,52 @@ export function ExhibitionDetail({
 
   useEscapeKey(() => setConfirmOpen(false), confirmOpen && !busy);
 
+  // 右スワイプで一覧へ戻るジェスチャ（カード詳細画面のみ）。
+  // 画面左端(40px以内)から始まり、右へ80px以上・縦移動40px以内のときだけ発火する。
+  // 縦移動が大きければ通常スクロール扱い。preventDefault しないのでスクロールは壊さない。
+  const EDGE_START_PX = 40; // この距離以内の左端から始めたときだけ対象
+  const SWIPE_BACK_PX = 80; // 右方向にこれ以上動いたら戻る
+  const VERTICAL_CANCEL_PX = 40; // 縦移動がこれを超えたらスクロール扱いで無効
+  const swipeRef = useRef({ tracking: false, startX: 0, startY: 0 });
+
+  // ジェスチャを有効にできる状態か（シート・画像拡大・削除ダイアログ表示中は無効）
+  const swipeActive = swipeBackEnabled && !confirmOpen;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const s = swipeRef.current;
+    if (!swipeActive || e.touches.length !== 1) {
+      s.tracking = false;
+      return;
+    }
+    const t = e.touches[0];
+    if (t.clientX <= EDGE_START_PX) {
+      s.tracking = true;
+      s.startX = t.clientX;
+      s.startY = t.clientY;
+    } else {
+      s.tracking = false;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const s = swipeRef.current;
+    if (!s.tracking) return;
+    // 縦移動が大きくなったらスクロールとみなして追跡をやめる
+    if (Math.abs(e.touches[0].clientY - s.startY) > VERTICAL_CANCEL_PX) {
+      s.tracking = false;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const s = swipeRef.current;
+    if (!s.tracking) return;
+    s.tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+    if (dx >= SWIPE_BACK_PX && Math.abs(dy) <= VERTICAL_CANCEL_PX) onBack();
+  };
+
   const handleConfirmDelete = async () => {
     setBusy(true);
     try {
@@ -47,7 +96,15 @@ export function ExhibitionDetail({
   };
 
   return (
-    <div className="detail">
+    <div
+      className="detail"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        swipeRef.current.tracking = false;
+      }}
+    >
       <header className="detail-header">
         <button type="button" className="back-btn" onClick={onBack}>
           ← 戻る

@@ -52,8 +52,8 @@ export function TagManager({
   const [dropIndex, setDropIndex] = useState<number | null>(null); // 挿入位置(0..n)
 
   // 自動スクロール設定：コンテナ端からこの距離内に入ったら開始し、端に近いほど速くする
-  const AUTO_SCROLL_EDGE = 72; // 端からの判定距離(px)
-  const AUTO_SCROLL_MAX = 14; // 1フレームあたりの最大スクロール量(px)
+  const AUTO_SCROLL_EDGE = 56; // 端からの判定距離(px)
+  const AUTO_SCROLL_MAX = 10; // 1フレームあたりの最大スクロール量(px)
 
   // タッチ長押し設定（押下後この時間ほぼ静止でドラッグ開始）
   const LONG_PRESS_MS = 150;
