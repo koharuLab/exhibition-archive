@@ -51,7 +51,7 @@ export function ExhibitionDetail({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const EXIT_MS = prefersReduced ? 0 : 200; // 戻る成功：右へ抜ける
   const SNAP_MS = prefersReduced ? 0 : 180; // 戻る失敗：元位置へ戻す
-  const DIM_MAX = 0.55; // 背景の最大の暗さ（スワイプ量が小さいときに最も暗い）
+  const DIM_MAX = 0.7; // 背景の最大の暗さ（スワイプ量が小さいときに最も暗い）
   const detailRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null); // 背後の一覧を暗くする暗幕
   const swipeRef = useRef({ tracking: false, dragging: false, startX: 0, startY: 0, dx: 0 });
