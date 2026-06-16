@@ -225,67 +225,15 @@ export default function App() {
     </div>
   ) : null;
 
-  if (view.kind === 'detail' && detailExhibition) {
-    return (
-      <>
-        <ExhibitionDetail
-          exhibition={detailExhibition}
-          // シート・画像拡大の表示中は右スワイプ戻るを無効化する
-          swipeBackEnabled={sheet === null && viewerPhotoId === null}
-          onBack={() => setView({ kind: 'list' })}
-          onEdit={() => setSheet({ mode: 'edit', id: detailExhibition.id })}
-          onViewPhoto={() => {
-            if (detailExhibition.ticketPhotoId) {
-              setViewerPhotoId(detailExhibition.ticketPhotoId);
-            }
-          }}
-          onDelete={async () => {
-            // 取り消し用に展覧会レコードと写真をスナップショット（削除前に取得）
-            const snapshot = { ...detailExhibition, tags: [...detailExhibition.tags] };
-            const photo = snapshot.ticketPhotoId
-              ? await getPhoto(snapshot.ticketPhotoId)
-              : undefined;
-            try {
-              await remove(snapshot.id);
-            } catch {
-              return; // エラーは useExhibitions が表示済み（詳細画面のまま残す）
-            }
-            setView({ kind: 'list' });
-            showUndo('削除しました', () =>
-              restoreExhibitions([snapshot], photo ? [photo] : []),
-            );
-          }}
-        />
-
-        {/* 編集シート：開いている間だけマウントしフォーム状態を初期化する */}
-        {sheet?.mode === 'edit' && editTarget && (
-          <ExhibitionFormSheet
-            key={editTarget.id}
-            open
-            initial={editTarget}
-            suggestions={suggestions}
-            onClose={() => setSheet(null)}
-            onSubmit={async ({ value, photoIntent }) => {
-              const ticketPhotoId = await resolvePhotoIntent(
-                editTarget.ticketPhotoId,
-                photoIntent,
-              );
-              await update(editTarget.id, { ...value, ticketPhotoId });
-            }}
-          />
-        )}
-
-        {viewerPhotoId && (
-          <PhotoViewer photoId={viewerPhotoId} onClose={() => setViewerPhotoId(null)} />
-        )}
-
-        {errorBanner}
-      </>
-    );
-  }
-
   return (
-    <div className="list-screen" onClick={handleScreenClick}>
+    <>
+      {/* 一覧画面：詳細を開いても背後に残す（スクロール位置・絞り込み状態を保持）。
+          詳細表示中は aria-hidden で背後の操作対象から外す（上に fixed レイヤーが重なる） */}
+      <div
+        className="list-screen"
+        onClick={handleScreenClick}
+        aria-hidden={view.kind === 'detail'}
+      >
       {selectionMode ? (
         <header className="list-header">
           <button type="button" className="menu-btn" aria-label="選択をやめる" onClick={cancelSelection}>
@@ -513,6 +461,66 @@ export default function App() {
         />
       )}
 
+    </div>
+
+      {/* 詳細レイヤー：一覧を背後に残したまま fixed で上に重ねる。
+          左端からの右スワイプで詳細が指について右へ動き、背後の一覧が見える（ExhibitionDetail 側で制御） */}
+      {view.kind === 'detail' && detailExhibition && (
+        <>
+          <ExhibitionDetail
+            exhibition={detailExhibition}
+            // シート・画像拡大の表示中は右スワイプ戻るを無効化する
+            swipeBackEnabled={sheet === null && viewerPhotoId === null}
+            onBack={() => setView({ kind: 'list' })}
+            onEdit={() => setSheet({ mode: 'edit', id: detailExhibition.id })}
+            onViewPhoto={() => {
+              if (detailExhibition.ticketPhotoId) {
+                setViewerPhotoId(detailExhibition.ticketPhotoId);
+              }
+            }}
+            onDelete={async () => {
+              // 取り消し用に展覧会レコードと写真をスナップショット（削除前に取得）
+              const snapshot = { ...detailExhibition, tags: [...detailExhibition.tags] };
+              const photo = snapshot.ticketPhotoId
+                ? await getPhoto(snapshot.ticketPhotoId)
+                : undefined;
+              try {
+                await remove(snapshot.id);
+              } catch {
+                return; // エラーは useExhibitions が表示済み（詳細画面のまま残す）
+              }
+              setView({ kind: 'list' });
+              showUndo('削除しました', () =>
+                restoreExhibitions([snapshot], photo ? [photo] : []),
+              );
+            }}
+          />
+
+          {/* 編集シート：開いている間だけマウントしフォーム状態を初期化する */}
+          {sheet?.mode === 'edit' && editTarget && (
+            <ExhibitionFormSheet
+              key={editTarget.id}
+              open
+              initial={editTarget}
+              suggestions={suggestions}
+              onClose={() => setSheet(null)}
+              onSubmit={async ({ value, photoIntent }) => {
+                const ticketPhotoId = await resolvePhotoIntent(
+                  editTarget.ticketPhotoId,
+                  photoIntent,
+                );
+                await update(editTarget.id, { ...value, ticketPhotoId });
+              }}
+            />
+          )}
+
+          {viewerPhotoId && (
+            <PhotoViewer photoId={viewerPhotoId} onClose={() => setViewerPhotoId(null)} />
+          )}
+        </>
+      )}
+
+      {/* 共通トースト・エラー（一覧／詳細どちらでも最前面に出す） */}
       {undoState && (
         <UndoToast
           key={undoState.id}
@@ -523,6 +531,6 @@ export default function App() {
       )}
 
       {errorBanner}
-    </div>
+    </>
   );
 }

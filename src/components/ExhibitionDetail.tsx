@@ -45,7 +45,12 @@ export function ExhibitionDetail({
   const EDGE_START_PX = 40; // この距離以内の左端から始めたときだけ対象
   const VERTICAL_CANCEL_PX = 70; // 縦移動がこれを超え、かつ横より縦が大きければスクロール扱い
   const DIRECTION_COMMIT_PX = 12; // 横が縦より勝りこの距離動いたら横スワイプとして確定
-  const EXIT_MS = 200; // 戻る／復帰アニメーションの長さ
+  // prefers-reduced-motion が有効なら戻り／復帰アニメーションを無効化（即時）にする
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const EXIT_MS = prefersReduced ? 0 : 200; // 戻る成功：右へ抜ける
+  const SNAP_MS = prefersReduced ? 0 : 180; // 戻る失敗：元位置へ戻す
   const detailRef = useRef<HTMLDivElement>(null);
   const swipeRef = useRef({ tracking: false, dragging: false, startX: 0, startY: 0, dx: 0 });
   const timerRef = useRef<number | null>(null);
@@ -54,11 +59,11 @@ export function ExhibitionDetail({
   const swipeActive = swipeBackEnabled && !confirmOpen;
 
   // 詳細画面の transform を更新する。x>0 のときだけ translateX を当て、
-  // 左側に背景が見えるよう左端に影も付ける。指に追従中は transition なし、離した後は有効。
-  const applyTransform = (x: number, withTransition: boolean) => {
+  // 左側に背景が見えるよう左端に影も付ける。指に追従中(durationMs=0)は transition なし。
+  const applyTransform = (x: number, durationMs: number) => {
     const el = detailRef.current;
     if (!el) return;
-    el.style.transition = withTransition ? `transform ${EXIT_MS}ms ease` : 'none';
+    el.style.transition = durationMs > 0 ? `transform ${durationMs}ms ease` : 'none';
     el.style.transform = `translateX(${Math.max(0, x)}px)`;
     el.style.boxShadow = x > 0 ? '-8px 0 24px rgba(0, 0, 0, 0.15)' : '';
   };
@@ -110,7 +115,7 @@ export function ExhibitionDetail({
     // 横スワイプ中：左方向は無視（>=0）、指に追従（transition なし）
     const x = Math.max(0, dx);
     s.dx = x;
-    applyTransform(x, false);
+    applyTransform(x, 0);
   };
 
   const handleTouchEnd = () => {
@@ -123,21 +128,21 @@ export function ExhibitionDetail({
     // 画面幅の28% か 100px の小さい方を超えたら戻る（どちらかを満たせば成立）
     const trigger = Math.min(window.innerWidth * 0.28, 100);
     if (s.dx >= trigger) {
-      // 右へ抜けるアニメーションのあと一覧へ
-      applyTransform(window.innerWidth, true);
+      // 戻る成功：右へ抜けるアニメーション(200ms)のあと一覧へ
+      applyTransform(window.innerWidth, EXIT_MS);
       timerRef.current = window.setTimeout(onBack, EXIT_MS);
     } else {
-      // 閾値未満：元の位置へ戻し、アニメーション後に transform を消す
-      applyTransform(0, true);
-      timerRef.current = window.setTimeout(clearTransform, EXIT_MS);
+      // 戻る失敗：元の位置へ戻し(180ms)、アニメーション後に transform を消す
+      applyTransform(0, SNAP_MS);
+      timerRef.current = window.setTimeout(clearTransform, SNAP_MS);
     }
   };
 
   const handleTouchCancel = () => {
     const s = swipeRef.current;
     if (s.tracking && s.dragging) {
-      applyTransform(0, true);
-      timerRef.current = window.setTimeout(clearTransform, EXIT_MS);
+      applyTransform(0, SNAP_MS);
+      timerRef.current = window.setTimeout(clearTransform, SNAP_MS);
     }
     s.tracking = false;
     s.dragging = false;
@@ -150,6 +155,19 @@ export function ExhibitionDetail({
     },
     [],
   );
+
+  // 横スワイプ確定中はブラウザの縦スクロールを止め、移動を横方向だけに固定する。
+  // （確定前＝縦スクロール意図のときは preventDefault しないので通常スクロールは維持）
+  // React の onTouchMove は passive のため、非パッシブの native リスナーで止める。
+  useEffect(() => {
+    const el = detailRef.current;
+    if (!el) return;
+    const onTouchMove = (ev: TouchEvent) => {
+      if (swipeRef.current.dragging) ev.preventDefault();
+    };
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, []);
 
   const handleConfirmDelete = async () => {
     setBusy(true);

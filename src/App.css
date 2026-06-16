@@ -3,6 +3,8 @@
   position: relative;
   min-height: 100svh;
   padding: 8px 16px 96px;
+  /* 一覧内の z-index（固定ヘッダー等）を内部に閉じ込め、上に重なる詳細レイヤーが必ず前面に来るようにする */
+  isolation: isolate;
 }
 
 .list-header {
@@ -780,12 +782,20 @@
 
 /* ===== 詳細画面 ===== */
 .detail {
+  /* 一覧の上に重ねる全画面レイヤー。背後に一覧が残り、右スワイプ中だけ左側に見える。
+     z-index は一覧(isolate)より上、各種シート/確認/トースト(100+)より下に置く。 */
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow-y: auto;
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   /* 下端（ホームバー等のセーフエリア含む）に余白を足し、
      削除ボタンが画面下に張り付いて低く見えないようにする */
   padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px));
-  min-height: 100svh;
+  /* スワイプ追従の translateX は ExhibitionDetail が直接 style で当てる（合成を促す） */
+  will-change: transform;
 }
 
 .detail-header {
