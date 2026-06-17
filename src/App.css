@@ -1,31 +1,7 @@
-/* ===== 起動時ローディング ===== */
-.app-loading {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-}
-
-.app-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: app-spin 0.8s linear infinite;
-}
-
-@keyframes app-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 初期データ読み込み完了後、一覧をまとめて短くフェードインさせる */
+/* ===== 起動時の表示 ===== */
+/* 初期データ読み込み完了後、カード一覧をまとめてフェードインさせる */
 .app-fade-in {
-  animation: app-fade-in 0.22s ease;
+  animation: app-fade-in 0.4s ease;
 }
 
 @keyframes app-fade-in {
@@ -39,9 +15,6 @@
 
 /* アニメーションを控える設定では無効化する */
 @media (prefers-reduced-motion: reduce) {
-  .app-spinner {
-    animation-duration: 1.6s;
-  }
   .app-fade-in {
     animation: none;
   }
@@ -105,16 +78,17 @@
   background: none;
   border: none;
   color: inherit;
-  font-size: 25px;
+  font-size: 27px;
   line-height: 1;
-  padding: 4px 8px;
+  /* 当たり判定はアイコン(font-size)に比例させる（em 指定） */
+  padding: 0.3em 0.4em;
   border-radius: 8px;
 }
 
 /* 複数選択モードのヘッダー */
 .selection-count {
   flex: 1;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 600;
   color: inherit;
 }

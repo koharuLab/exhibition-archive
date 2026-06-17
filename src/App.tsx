@@ -228,22 +228,16 @@ export default function App() {
     </div>
   ) : null;
 
-  // 初期データ（展覧会＋タグ色・表示順）が揃うまでは一覧を描かず、中央にローディングのみ表示する。
-  // これにより読み込み途中の要素が順に現れるレイアウトシフトを防ぐ。
-  if (loading || !tagsReady) {
-    return (
-      <div className="app-loading" role="status" aria-label="読み込み中">
-        <div className="app-spinner" />
-      </div>
-    );
-  }
+  // 初期データ（展覧会＋タグ色・表示順）が揃ったか。
+  // 揃うまではカード一覧だけ描かず、ヘッダー等の基本レイアウトは即表示する。
+  const contentReady = !loading && tagsReady;
 
   return (
     <>
       {/* 一覧画面：詳細を開いても背後に残す（スクロール位置・絞り込み状態を保持）。
           詳細表示中は aria-hidden で背後の操作対象から外す（上に fixed レイヤーが重なる） */}
       <div
-        className="list-screen app-fade-in"
+        className="list-screen"
         onClick={handleScreenClick}
         aria-hidden={view.kind === 'detail'}
       >
@@ -377,28 +371,32 @@ export default function App() {
         onClearAll={clearTags}
       />
 
-      {loading ? (
-        <p className="empty-state">読み込み中...</p>
-      ) : exhibitions.length === 0 ? (
-        <div className="empty-state">
-          <p className="empty-title">まだ展覧会が追加されていません</p>
-          <p className="empty-text">
-            訪れた展覧会や、気になる展覧会を
-            <br />
-            右下の＋ボタンから追加できます
-          </p>
+      {/* カード一覧部分は初期データが揃うまで描かず、揃ったらまとめてフェードインさせる。
+          ヘッダー等の基本レイアウトは上で先に表示済みなのでレイアウトシフトは起きない。 */}
+      {contentReady && (
+        <div className="app-fade-in">
+          {exhibitions.length === 0 ? (
+            <div className="empty-state">
+              <p className="empty-title">まだ展覧会が追加されていません</p>
+              <p className="empty-text">
+                訪れた展覧会や気になる展覧会を
+                <br />
+                右下の＋ボタンから追加できます
+              </p>
+            </div>
+          ) : (
+            <ExhibitionGrid
+              exhibitions={filtered}
+              viewMode={viewMode}
+              onOpen={openDetail}
+              onSelectTag={addTag}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onLongPress={enterSelection}
+            />
+          )}
         </div>
-      ) : (
-        <ExhibitionGrid
-          exhibitions={filtered}
-          viewMode={viewMode}
-          onOpen={openDetail}
-          onSelectTag={addTag}
-          selectionMode={selectionMode}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onLongPress={enterSelection}
-        />
       )}
 
       {/* 追加ボタンは選択モード中は隠す */}
