@@ -251,7 +251,7 @@ export function ExhibitionDetail({
       <h1 className="detail-name">{exhibition.name}</h1>
 
       <dl className="detail-fields">
-        <dt>年月</dt>
+        <dt>訪問年月</dt>
         <dd>{formatForDisplay(exhibition.visitYearMonth)}</dd>
 
         {exhibition.venue && (
