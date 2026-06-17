@@ -23,6 +23,10 @@ import { useTagColors } from './context/tagColorContext';
 
 /** 元に戻す通知の表示時間（ミリ秒）。経過後は削除を確定する。 */
 const UNDO_MS = 5000;
+/** 起動時の蓋画面の最低表示時間（ミリ秒）。 */
+const COVER_MIN_MS = 1500;
+/** 蓋画面のフェードアウト時間（ミリ秒・CSS の transition と一致させる）。 */
+const COVER_FADE_MS = 400;
 
 type View = { kind: 'list' } | { kind: 'detail'; id: string };
 type Sheet = null | { mode: 'add' } | { mode: 'edit'; id: string };
@@ -61,6 +65,12 @@ export default function App() {
   // タグ色・表示順の初期読み込み完了フラグ（展覧会データと合わせて初期表示を待つ）
   const { ready: tagsReady } = useTagColors();
 
+  // 起動時の蓋画面（背景色で全画面を覆い、裏でメイン画面を構築する）
+  const [coverMinElapsed, setCoverMinElapsed] = useState(false); // 最低表示時間が経過したか
+  const [coverRemoved, setCoverRemoved] = useState(false); // 要素を取り除いたか
+  // 準備完了（データ読み込み済み＋最低表示時間経過）でフェードアウト開始（派生値）
+  const coverHiding = !loading && tagsReady && coverMinElapsed;
+
   // 「元に戻す」通知：5秒以内に押せば run() で復元、経過すれば削除確定（破棄）
   // id は通知ごとに更新し、トーストの key としてゲージアニメーションを毎回やり直させる
   const [undoState, setUndoState] = useState<
@@ -95,6 +105,19 @@ export default function App() {
 
   // アンマウント時にタイマを後始末
   useEffect(() => () => clearUndoTimer(), []);
+
+  // 蓋画面：最低表示時間（COVER_MIN_MS）が経過したらフラグを立てる
+  useEffect(() => {
+    const t = window.setTimeout(() => setCoverMinElapsed(true), COVER_MIN_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // フェードアウト開始後、アニメーション完了（COVER_FADE_MS）で蓋要素を除去する
+  useEffect(() => {
+    if (!coverHiding) return;
+    const t = window.setTimeout(() => setCoverRemoved(true), COVER_FADE_MS);
+    return () => window.clearTimeout(t);
+  }, [coverHiding]);
 
   const suggestions = useMemo(() => collectUsedTags(exhibitions), [exhibitions]);
   const tagCounts = useMemo(() => collectTagCounts(exhibitions), [exhibitions]);
@@ -371,33 +394,29 @@ export default function App() {
         onClearAll={clearTags}
       />
 
-      {/* カード一覧部分は初期データが揃うまで描かず、揃ったらまとめてフェードインさせる。
-          ヘッダー等の基本レイアウトは上で先に表示済みなのでレイアウトシフトは起きない。 */}
-      {contentReady && (
-        <div className="app-fade-in">
-          {exhibitions.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-title">まだ展覧会が追加されていません</p>
-              <p className="empty-text">
-                訪れた展覧会や気になる展覧会を
-                <br />
-                右下の＋ボタンから追加できます
-              </p>
-            </div>
-          ) : (
-            <ExhibitionGrid
-              exhibitions={filtered}
-              viewMode={viewMode}
-              onOpen={openDetail}
-              onSelectTag={addTag}
-              selectionMode={selectionMode}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-              onLongPress={enterSelection}
-            />
-          )}
-        </div>
-      )}
+      {/* カード一覧は初期データが揃ってから描く（蓋画面の裏で構築される）。 */}
+      {contentReady &&
+        (exhibitions.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-title">まだ展覧会が追加されていません</p>
+            <p className="empty-text">
+              訪れた展覧会や気になる展覧会を
+              <br />
+              右下の＋ボタンから追加できます
+            </p>
+          </div>
+        ) : (
+          <ExhibitionGrid
+            exhibitions={filtered}
+            viewMode={viewMode}
+            onOpen={openDetail}
+            onSelectTag={addTag}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onLongPress={enterSelection}
+          />
+        ))}
 
       {/* 追加ボタンは選択モード中は隠す */}
       {!selectionMode && (
@@ -542,6 +561,14 @@ export default function App() {
       )}
 
       {errorBanner}
+
+      {/* 起動時の蓋画面：最前面で全画面を覆い操作をブロックする。準備完了後にフェードアウトして除去 */}
+      {!coverRemoved && (
+        <div
+          className={coverHiding ? 'app-cover app-cover-hide' : 'app-cover'}
+          aria-hidden="true"
+        />
+      )}
     </>
   );
 }

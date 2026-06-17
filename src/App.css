@@ -1,22 +1,23 @@
-/* ===== 起動時の表示 ===== */
-/* 初期データ読み込み完了後、カード一覧をまとめてフェードインさせる */
-.app-fade-in {
-  animation: app-fade-in 0.4s ease;
+/* ===== 起動時の蓋画面 ===== */
+/* 起動直後、現在のテーマ背景色(var(--bg))で全画面を覆い、裏でメイン画面を構築する。
+   スピナー・文言は出さない。最前面に置き、表示中・フェード中は操作をブロックする。 */
+.app-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 0.4s ease;
 }
 
-@keyframes app-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* 準備完了後にフェードアウト（opacity 1 -> 0）。完了後に要素自体を取り除く。 */
+.app-cover-hide {
+  opacity: 0;
 }
 
-/* アニメーションを控える設定では無効化する */
 @media (prefers-reduced-motion: reduce) {
-  .app-fade-in {
-    animation: none;
+  .app-cover {
+    transition: none;
   }
 }
 
