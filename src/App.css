@@ -1,3 +1,52 @@
+/* ===== 起動時ローディング ===== */
+.app-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.app-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 初期データ読み込み完了後、一覧をまとめて短くフェードインさせる */
+.app-fade-in {
+  animation: app-fade-in 0.22s ease;
+}
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* アニメーションを控える設定では無効化する */
+@media (prefers-reduced-motion: reduce) {
+  .app-spinner {
+    animation-duration: 1.6s;
+  }
+  .app-fade-in {
+    animation: none;
+  }
+}
+
 /* ===== 一覧画面 ===== */
 .list-screen {
   position: relative;

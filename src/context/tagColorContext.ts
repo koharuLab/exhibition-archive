@@ -2,6 +2,8 @@
 import { createContext, useContext } from 'react';
 
 export interface TagColorContextValue {
+  /** 初期データ（タグ色・表示順）の読み込みが完了したか */
+  ready: boolean;
   /** タグ名 -> 色キー */
   colors: Record<string, string>;
   /** タグに色を割り当てて永続化する */
@@ -15,6 +17,7 @@ export interface TagColorContextValue {
 }
 
 export const TagColorContext = createContext<TagColorContextValue>({
+  ready: false,
   colors: {},
   setColor: () => {},
   removeColor: () => {},

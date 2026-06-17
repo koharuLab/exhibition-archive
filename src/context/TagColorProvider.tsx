@@ -12,14 +12,16 @@ import { TagColorContext } from './tagColorContext';
 export function TagColorProvider({ children }: { children: ReactNode }) {
   const [colors, setColors] = useState<Record<string, string>>({});
   const [order, setOrderState] = useState<string[]>([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-    loadTagColors().then((map) => {
-      if (active) setColors(map);
-    });
-    loadTagOrder().then((list) => {
-      if (active) setOrderState(list);
+    // 色・表示順の両方が揃ってから ready にする（初期表示のガタつき防止）
+    Promise.all([loadTagColors(), loadTagOrder()]).then(([map, list]) => {
+      if (!active) return;
+      setColors(map);
+      setOrderState(list);
+      setReady(true);
     });
     return () => {
       active = false;
@@ -46,7 +48,7 @@ export function TagColorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <TagColorContext.Provider value={{ colors, setColor, removeColor, order, setOrder }}>
+    <TagColorContext.Provider value={{ ready, colors, setColor, removeColor, order, setOrder }}>
       {children}
     </TagColorContext.Provider>
   );

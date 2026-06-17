@@ -19,6 +19,7 @@ import { UndoToast } from './components/UndoToast';
 import { useViewMode } from './hooks/useViewMode';
 import { useTheme } from './hooks/useTheme';
 import { useTagOperations } from './hooks/useTagOperations';
+import { useTagColors } from './context/tagColorContext';
 
 /** 元に戻す通知の表示時間（ミリ秒）。経過後は削除を確定する。 */
 const UNDO_MS = 5000;
@@ -57,6 +58,8 @@ export default function App() {
   const [selectionMenu, setSelectionMenu] = useState<null | 'select' | 'action'>(null);
   const [viewMode, setViewMode] = useViewMode();
   const [theme, setTheme] = useTheme();
+  // タグ色・表示順の初期読み込み完了フラグ（展覧会データと合わせて初期表示を待つ）
+  const { ready: tagsReady } = useTagColors();
 
   // 「元に戻す」通知：5秒以内に押せば run() で復元、経過すれば削除確定（破棄）
   // id は通知ごとに更新し、トーストの key としてゲージアニメーションを毎回やり直させる
@@ -225,12 +228,22 @@ export default function App() {
     </div>
   ) : null;
 
+  // 初期データ（展覧会＋タグ色・表示順）が揃うまでは一覧を描かず、中央にローディングのみ表示する。
+  // これにより読み込み途中の要素が順に現れるレイアウトシフトを防ぐ。
+  if (loading || !tagsReady) {
+    return (
+      <div className="app-loading" role="status" aria-label="読み込み中">
+        <div className="app-spinner" />
+      </div>
+    );
+  }
+
   return (
     <>
       {/* 一覧画面：詳細を開いても背後に残す（スクロール位置・絞り込み状態を保持）。
           詳細表示中は aria-hidden で背後の操作対象から外す（上に fixed レイヤーが重なる） */}
       <div
-        className="list-screen"
+        className="list-screen app-fade-in"
         onClick={handleScreenClick}
         aria-hidden={view.kind === 'detail'}
       >
