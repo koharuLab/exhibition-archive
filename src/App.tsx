@@ -24,9 +24,9 @@ import { useTagColors } from './context/tagColorContext';
 /** 元に戻す通知の表示時間（ミリ秒）。経過後は削除を確定する。 */
 const UNDO_MS = 5000;
 /** 起動時の蓋画面の最低表示時間（ミリ秒）。 */
-const COVER_MIN_MS = 1500;
+const COVER_MIN_MS = 700;
 /** 蓋画面のフェードアウト時間（ミリ秒・CSS の transition と一致させる）。 */
-const COVER_FADE_MS = 400;
+const COVER_FADE_MS = 700;
 
 type View = { kind: 'list' } | { kind: 'detail'; id: string };
 type Sheet = null | { mode: 'add' } | { mode: 'edit'; id: string };

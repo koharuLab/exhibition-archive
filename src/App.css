@@ -915,10 +915,16 @@
 
 .detail-actions {
   display: flex;
-  flex-direction: column;
+  /* 編集（左）・削除（右）を同じ行に並べる */
+  flex-direction: row;
   gap: 10px;
   margin-top: auto;
   padding-top: 24px;
+}
+
+/* 2つのボタンを均等幅にして1行に収める */
+.detail-actions .action-btn {
+  flex: 1;
 }
 
 .action-btn {
@@ -1116,6 +1122,11 @@
 
 .primary-btn:disabled {
   opacity: 0.6;
+}
+
+/* 詳細画面下部の「一覧に戻る」。primary-btn と同デザインで、上の操作群と少し間隔を空ける */
+.detail-back-bottom {
+  margin-top: 12px;
 }
 
 /* ===== タグ入力 ===== */

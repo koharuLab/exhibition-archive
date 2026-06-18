@@ -298,6 +298,15 @@ export function ExhibitionDetail({
         </button>
       </div>
 
+      {/* 画面下部から一覧へ戻る導線（左上の「戻る」は残す）。見た目は保存ボタンと共通の primary-btn */}
+      <button
+        type="button"
+        className="primary-btn detail-back-bottom"
+        onClick={onBack}
+      >
+        一覧に戻る
+      </button>
+
       {/* 削除確認ダイアログ（仕様 §16 削除） */}
       {confirmOpen && (
         <div
